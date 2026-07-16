@@ -21,8 +21,8 @@ Use it to:
 | Format | Reader name | Extensions | Status | Dependency |
 |---|---|---|---|---|
 | Kvaser CanKing TXT | `kvaser-txt` | `.txt` | Supported | none |
-| candump text | `candump` | `.log` | Planned | none |
-| Vector ASC | `vector-asc` | `.asc` | Planned | none |
+| candump text | `candump` | `.log` | Supported | none |
+| Vector ASC | `vector-asc` | `.asc` | Supported | none |
 | PCAN TRC | `pcan-trc` | `.trc` | Planned | none |
 | Generic CSV | `csv-table` | `.csv` | Planned | none |
 | Vector BLF | `vector-blf` | `.blf` | Planned adapter | `python-can` |
@@ -63,7 +63,7 @@ meta = capkit.probe("trace.txt")
 print(meta.format, meta.start_time)
 
 # registered reader names
-print(capkit.available_formats())   # ['kvaser-txt']
+print(capkit.available_formats())   # ['candump', 'kvaser-txt', 'vector-asc']
 ```
 
 The public API is six names: `read`, `probe`, `available_formats`,
@@ -116,7 +116,9 @@ class MyReader:
 capkit.register_reader(MyReader)
 ```
 
-Registration is process-global and is normally performed at import time.
+Registration is process-global. Installed packages can also advertise reader
+classes through the `capkit.readers` entry-point group; capkit discovers and
+caches them on the first `read()`, `probe()`, or `available_formats()` call.
 dbckit's `.txt` entry point sniffs among all registered readers, so a reader
 whose `sniff()` uniquely matches the content of a `.txt` log is used there
 too, regardless of the extensions it claims.
@@ -151,8 +153,8 @@ for decoded in dbckit.decode_frames(db, capkit.read("trace.txt")):
 ```
 
 capkit also registers its readers in dbckit's `dbckit.readers` entry-point
-group. With both packages installed, `dbckit.decode_log()` reads `.txt` logs
-through capkit directly:
+group. With both packages installed, `dbckit.decode_log()` reads `.txt`,
+`.log`, and `.asc` logs through capkit directly:
 
 ```python
 for decoded in dbckit.decode_log(db, "trace.txt"):
@@ -163,6 +165,10 @@ for decoded in dbckit.decode_log(db, "trace.txt"):
 
 - Kvaser dialects with absolute start-time headers are not supported;
   `probe()` returns `start_time=None` for `kvaser-txt`.
+- candump error-flag records are skipped by default and rejected in strict
+  mode; decoding them as CAN error frames is not claimed.
+- Vector ASC relative timestamp directives and non-English month names are
+  rejected instead of being interpreted approximately.
 - capkit reads frames only: no DBC or signal awareness (that is dbckit's job),
   no hardware I/O, no log writing, no dataframe export, no CLI.
 

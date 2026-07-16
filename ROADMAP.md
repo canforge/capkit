@@ -1,13 +1,11 @@
 # Roadmap
 
-capkit 0.1.0 is [on PyPI](https://pypi.org/project/capkit/); the release checklist is complete
+capkit 0.2.0 is [on PyPI](https://pypi.org/project/capkit/); the release checklist is complete
 and retired (the release process lives in [docs/releasing.md](docs/releasing.md)). Readers are
 fixture-first: a format lands only with a real capture under `tests/fixtures/<format>/`.
 
 ## Planned readers
 
-- [ ] candump text (`.log`)
-- [ ] Vector ASC (`.asc`)
 - [ ] PCAN TRC (`.trc`)
 - [ ] Configurable generic CSV (`.csv`)
 - [ ] SocketCAN pcap/pcapng (`.pcap`, `.pcapng`)
@@ -16,16 +14,12 @@ fixture-first: a format lands only with a real capture under `tests/fixtures/<fo
 
 ## Reading pipeline
 
-- [ ] A `capkit.readers` entry-point group, so installed third-party formats are
-  discovered automatically without import-time registration
 - [ ] File-object and stdin input alongside paths, so live captures pipe straight in
   (`candump can0 | ...`)
 - [ ] Transparent reading of gzip-compressed logs (stdlib `gzip`; captures are large)
 - [ ] Collected-error mode between the two current extremes: skip unrecognized lines but
   report them (count and line numbers) instead of skipping silently or raising on the
   first
-- [ ] CAN FD flags on `Frame` (bit-rate switch, error-state indicator) when the first FD
-  fixture lands
 
 ## Stream operations
 

@@ -60,4 +60,6 @@ jobs:
           entry=next(name for name in names if name.endswith('entry_points.txt'));
           text=archive.read(entry).decode();
           assert '[dbckit.readers]' in text;
+          assert 'asc = capkit.readers.vector_asc:VectorAscReader' in text;
+          assert 'log = capkit.integration:DispatchReader' in text;
           assert 'txt = capkit.integration:DispatchReader' in text"

@@ -21,6 +21,15 @@ def test_frame_defaults_and_structural_contract() -> None:
     assert frame.is_error_frame is False
     assert frame.is_rx is None
     assert frame.dlc is None
+    assert frame.bitrate_switch is False
+    assert frame.error_state_indicator is False
+
+
+def test_frame_fd_flags_append_without_breaking_positional_construction() -> None:
+    frame = Frame(1.0, 0x123, b"\x01", 2, False, True, False, False, True, None, True, True)
+
+    assert frame.bitrate_switch is True
+    assert frame.error_state_indicator is True
 
 
 def test_frame_is_frozen_and_slotted() -> None:

@@ -19,6 +19,8 @@ class Frame:
     is_error_frame: bool = False
     is_rx: bool | None = None
     dlc: int | None = None
+    bitrate_switch: bool = False
+    error_state_indicator: bool = False
 
 
 @dataclass(frozen=True, slots=True)

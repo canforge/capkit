@@ -12,6 +12,8 @@ dbckit = pytest.importorskip("dbckit")
 log_module = pytest.importorskip("dbckit.operations.log")
 
 FIXTURE = Path(__file__).parent / "fixtures" / "kvaser" / "kvaser.txt"
+CANDUMP_FIXTURE = Path(__file__).parent / "fixtures" / "candump" / "candump.log"
+ASC_FIXTURE = Path(__file__).parent / "fixtures" / "vector_asc" / "python_can_logfile.asc"
 
 MINIMAL_DBC = """VERSION "1.0"
 
@@ -23,6 +25,9 @@ BU_ : ECU
 
 BO_ 2365325275 EngineData: 8 ECU
  SG_ SecondByte : 8|8@1+ (1,0) [0|255] "" ECU
+
+BO_ 418119424 AscData: 8 ECU
+ SG_ FirstByte : 0|8@1+ (1,0) [0|255] "" ECU
 """
 
 
@@ -50,3 +55,26 @@ def test_decode_log_discovers_txt_entry_point(database, monkeypatch: pytest.Monk
 
     assert len(decoded) == 1
     assert decoded[0].signals["SecondByte"] == pytest.approx(49.0)
+
+
+def test_decode_log_discovers_candump_dispatch_entry_point(database, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(log_module, "_ENTRY_POINTS", None)
+    monkeypatch.setattr(log_module, "_ENTRY_POINT_READERS", {})
+
+    decoded = list(islice(dbckit.decode_log(database, CANDUMP_FIXTURE), 1))
+
+    assert len(decoded) == 1
+    assert decoded[0].timestamp == pytest.approx(1752624000.000139)
+    assert decoded[0].signals["SecondByte"] == pytest.approx(49.0)
+
+
+def test_decode_log_discovers_vector_asc_entry_point(database, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(log_module, "_ENTRY_POINTS", None)
+    monkeypatch.setattr(log_module, "_ENTRY_POINT_READERS", {})
+
+    decoded = list(islice(dbckit.decode_log(database, ASC_FIXTURE), 1))
+
+    assert len(decoded) == 1
+    assert decoded[0].timestamp == pytest.approx(3.098426)
+    assert decoded[0].signals["FirstByte"] == pytest.approx(1.0)
+    assert decoded[0].is_extended_frame is True

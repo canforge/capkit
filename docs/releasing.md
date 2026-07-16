@@ -19,7 +19,7 @@ Before tagging a release:
 - [ ] README examples still accurate for the new version.
 
 CI's build check already verifies that the wheel contains `capkit/py.typed` and the
-`dbckit.readers` entry point `txt = capkit.integration:DispatchReader`.
+three `dbckit.readers` entry points for `.asc`, `.log`, and `.txt`.
 
 ## Steps
 
@@ -30,18 +30,18 @@ them to PyPI via [trusted publishing](https://docs.pypi.org/trusted-publishers/)
 
 ```bash
 # 1. Bump version
-#    Edit pyproject.toml: version = "0.1.0"
+#    Edit pyproject.toml: version = "X.Y.Z"
 
 # 2. Update CHANGELOG (see format below)
 
 # 3. Commit the release
 git add pyproject.toml CHANGELOG.md
-git commit -m "chore: release 0.1.0"
+git commit -m "chore: release X.Y.Z"
 git push origin main
 
 # 4. Tag — this triggers the release workflow
-git tag -a v0.1.0 -m "Release 0.1.0"
-git push origin v0.1.0
+git tag -a vX.Y.Z -m "Release X.Y.Z"
+git push origin vX.Y.Z
 
 # 5. Verify
 gh run watch                        # release workflow builds and publishes

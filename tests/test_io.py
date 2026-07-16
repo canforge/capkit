@@ -181,7 +181,9 @@ def test_unknown_explicit_format_lists_available_formats(tmp_path: Path) -> None
     with pytest.raises(ValueError) as exc_info:
         next(frames)
 
-    assert str(exc_info.value) == "Unknown log format 'missing'. Available formats: kvaser-txt."
+    assert str(exc_info.value) == (
+        "Unknown log format 'missing'. Available formats: candump, kvaser-txt, vector-asc."
+    )
 
 
 def test_unknown_extension_uses_content_sniffing(tmp_path: Path) -> None:
@@ -198,7 +200,9 @@ def test_unknown_content_lists_available_formats(tmp_path: Path) -> None:
     with pytest.raises(ValueError) as exc_info:
         list(capkit.read(path))
 
-    assert str(exc_info.value) == "Unknown log format for 'trace.dat'. Available formats: kvaser-txt."
+    assert str(exc_info.value) == (
+        "Unknown log format for 'trace.dat'. Available formats: candump, kvaser-txt, vector-asc."
+    )
 
 
 def test_ambiguous_sniff_fails_clearly(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

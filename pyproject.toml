@@ -33,12 +33,15 @@ dev = [
     "build",
     "dbckit>=1.0",   # test-only: exercises the optional entry-point integration tests
     "mypy",
+    "python-can>=4.6",  # test-only: reference reader/writer cross-checks
     "pytest>=8.0",
     "pytest-cov",
     "ruff",
 ]
 
 [project.entry-points."dbckit.readers"]
+asc = "capkit.readers.vector_asc:VectorAscReader"
+log = "capkit.integration:DispatchReader"
 txt = "capkit.integration:DispatchReader"
 
 [tool.hatch.build.targets.wheel]

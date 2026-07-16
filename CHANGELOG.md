@@ -7,6 +7,24 @@ Versioning will follow [Semantic Versioning](https://semver.org/) from 1.0.0 onw
 
 ---
 
+## [0.2.0] — 2026-07-16
+
+### Added
+
+- can-utils `candump -L` reader (`candump`) with classic, remote, and CAN FD support,
+  pinned by a 300-frame fixture.
+- Vector CANalyzer/CANoe ASC reader (`vector-asc`) covering classic, remote, error,
+  and CAN FD rows plus header-derived capture start times.
+- `Frame.bitrate_switch` and `Frame.error_state_indicator` CAN FD flags.
+- Lazy, cached discovery of third-party readers through the `capkit.readers`
+  entry-point group, including validated conflict and failure reporting.
+- python-can reference writer/reader cross-checks in the development test suite.
+
+### Changed
+
+- dbckit integration now handles `.log` through the sniffing dispatcher and
+  supersedes dbckit's built-in `.asc` reader with capkit's richer implementation.
+
 ## [0.1.0] — 2026-07-16
 
 Initial public release.

@@ -15,14 +15,14 @@ Readers are fixture-first: a format lands only with a real capture under
   `pip install -i https://test.pypi.org/simple/ capkit`
 - [x] **4. Date the `0.1.0` changelog section** and match the `pyproject.toml` version
 - [x] **5. Merge to `main` and push**
-- [ ] **6. Tag and release**: `git tag -a v0.1.0 -m "Release 0.1.0" && git push origin v0.1.0` —
+- [x] **6. Tag and release**: `git tag -a v0.1.0 -m "Release 0.1.0" && git push origin v0.1.0` —
   the workflow builds and publishes
-- [ ] **7. Verify the release**
-  - [ ] In a clean venv: `pip install capkit` then
+- [x] **7. Verify the release**
+  - [x] In a clean venv: `pip install capkit` then
     `python -c "import capkit; print(capkit.available_formats())"`
-  - [ ] With dbckit installed alongside, `dbckit.decode_log(db, "trace.txt")` resolves
+  - [x] With dbckit installed alongside, `dbckit.decode_log(db, "trace.txt")` resolves
     capkit's `.txt` entry point
-  - [ ] PyPI page shows license, links, and README correctly
+  - [x] PyPI page shows license, links, and README correctly
 
 ## Planned readers
 

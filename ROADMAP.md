@@ -1,28 +1,8 @@
 # Roadmap
 
-Readers are fixture-first: a format lands only with a real capture under
-`tests/fixtures/<format>/`.
-
-## Publish 0.1.0 to PyPI
-
-- [x] **1. Add `.github/workflows/release.yml`**: trigger on `v*` tags; build sdist + wheel;
-  publish with `pypa/gh-action-pypi-publish` using OIDC (`permissions: id-token: write`,
-  environment `pypi`) — no API tokens
-- [ ] **2. Register the trusted publisher on pypi.org** *(manual)*: add a *pending publisher*
-  for `canforge/capkit`, workflow `release.yml`, environment `pypi`, and create the protected
-  `pypi` environment in the GitHub repository settings
-- [ ] **3. Optional TestPyPI dry run**: point a copy of the workflow at TestPyPI, publish,
-  `pip install -i https://test.pypi.org/simple/ capkit`
-- [x] **4. Date the `0.1.0` changelog section** and match the `pyproject.toml` version
-- [x] **5. Merge to `main` and push**
-- [x] **6. Tag and release**: `git tag -a v0.1.0 -m "Release 0.1.0" && git push origin v0.1.0` —
-  the workflow builds and publishes
-- [x] **7. Verify the release**
-  - [x] In a clean venv: `pip install capkit` then
-    `python -c "import capkit; print(capkit.available_formats())"`
-  - [x] With dbckit installed alongside, `dbckit.decode_log(db, "trace.txt")` resolves
-    capkit's `.txt` entry point
-  - [x] PyPI page shows license, links, and README correctly
+capkit 0.1.0 is [on PyPI](https://pypi.org/project/capkit/); the release checklist is complete
+and retired (the release process lives in [docs/releasing.md](docs/releasing.md)). Readers are
+fixture-first: a format lands only with a real capture under `tests/fixtures/<format>/`.
 
 ## Planned readers
 

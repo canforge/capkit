@@ -74,7 +74,8 @@ One-time setup before the first tag can publish:
 - ...
 ```
 
-Keep one `## [Unreleased]` section at the top for in-progress work.
+While unreleased work exists, collect its entries under an `## [Unreleased]`
+section at the top; retitle it to the dated version when releasing.
 
 ## dbckit integration tests
 

@@ -7,8 +7,6 @@ Versioning will follow [Semantic Versioning](https://semver.org/) from 1.0.0 onw
 
 ---
 
-## [Unreleased]
-
 ## [0.1.0] — 2026-07-16
 
 Initial public release.

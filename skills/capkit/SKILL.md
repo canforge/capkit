@@ -1,0 +1,218 @@
+---
+name: capkit
+description: >
+  Correct usage of the capkit Python library for reading CAN bus capture
+  logs (Kvaser CanKing TXT, candump, Vector ASC) into one common frame
+  stream: streaming frames, probing header metadata, format detection and
+  sniffing, strict mode, custom reader registration, and feeding frames
+  into dbckit for DBC signal decoding. Use this skill whenever a task
+  involves CAN capture, log, or trace files (.txt, .log, .asc), CAN frame
+  streams, or log-format conversion in a project that has capkit installed
+  or mentions capkit — even if the request doesn't name the library. This
+  includes building tools or scripts ON TOP of capkit (analyzers,
+  converters, MCP servers, CI checks). Also consult it before reaching for
+  python-can idioms: capkit only reads finished log files into frozen
+  Frame objects, and python-can habits (bus I/O, writers, mutable
+  Message) produce code that fights the API.
+---
+
+# capkit
+
+capkit is a Python library (`pip install capkit`, Python ≥ 3.11, zero runtime
+dependencies) that reads CAN bus capture logs into one common stream of frozen
+`Frame` objects. It is **not python-can** and it is not a decoder: it has no
+DBC or signal awareness (that is dbckit's job), no hardware I/O, no writers,
+and no CLI. Every supported format parses into the same `Frame` dataclass, so
+downstream code never depends on which tool captured the log.
+
+The public API is six names: `read`, `probe`, `available_formats`,
+`register_reader`, `Frame`, `LogMeta`. Reader classes remain importable from
+`capkit.readers.<module>` for format-specific use.
+
+## The rules that prevent silently wrong results
+
+```python
+import capkit
+
+for frame in capkit.read("trace.txt"):      # lazy Iterator[Frame]
+    print(frame.timestamp, hex(frame.arbitration_id), frame.data.hex())
+
+meta = capkit.probe("trace.asc")            # header-only; never scans the body
+print(meta.format, meta.start_time)         # "vector-asc", datetime | None
+
+capkit.available_formats()                  # ['candump', 'kvaser-txt', 'vector-asc']
+```
+
+- **`read()` is lazy and one-shot.** Nothing is opened or parsed until the
+  returned iterator is consumed — even an unknown-format `ValueError` surfaces
+  at the first `next()`, not at the `read()` call. The iterator is consumed
+  once; `list()` it for multiple passes, or call `read()` again.
+- **Timestamps are exactly as recorded, never rebased.** `kvaser-txt` records
+  device-relative seconds, `candump` records epoch seconds, `vector-asc`
+  absolute-mode trace seconds. Compare timestamps only against values from the
+  same log; the absolute capture start (when the format records one) comes from
+  `probe()`, not from the frames.
+- **Frames are frozen, slotted dataclasses.** Assigning to a field raises;
+  use `dataclasses.replace(frame, ...)` for a modified copy. `frame.data` is
+  immutable `bytes`.
+
+## Format detection
+
+1. An explicit `format=` names a reader (`capkit.read(p, format="kvaser-txt")`)
+   and wins; an unknown name raises `ValueError`.
+2. Otherwise a file extension claimed by exactly one reader selects it.
+3. Otherwise the first 4 KiB are read as Latin-1 and offered to every reader's
+   `sniff()`; exactly one match selects it, anything else raises `ValueError`
+   listing the available formats.
+
+So a Kvaser log named `capture.bin` still resolves via sniffing, and an
+extension lie (`candump` content in a `.txt` file) is caught by content, not
+trusted by name.
+
+## Dirty logs and strict mode
+
+Readers skip headers, trailers, comments, and unrelated noise by default.
+`strict=True` instead raises a line-numbered `ValueError` on the first
+unrecognized nonblank line:
+
+```python
+frames = capkit.read("trace.txt", strict=True)
+```
+
+In **both** modes, a frame record whose DLC disagrees with its data byte
+count raises `ValueError` — corrupt frames are never silently dropped.
+
+What strict rejects is per-format grammar: `vector-asc` recognizes
+version/comment, status, statistic, trigger-block, measurement-start, and
+J1939 transport rows and skips them even under `strict=True`, but
+`kvaser-txt` rejects its own header and trailer lines under strict — so
+strict there only suits frame-only excerpts, not full CanKing exports.
+
+Error frames differ by format: `vector-asc` parses `ErrorFrame` rows into
+frames with `is_error_frame=True`, while `candump` error-flag records are
+skipped by default and rejected in strict mode (decoding them is not claimed).
+
+## Frame and LogMeta fields
+
+`Frame`: `timestamp: float`, `arbitration_id: int`, `data: bytes`,
+`channel: int | None`, `is_extended_frame`, `is_fd`, `is_remote_frame`,
+`is_error_frame`, `is_rx: bool | None` (`None` when the log records no
+direction), `dlc: int | None`, `bitrate_switch`, `error_state_indicator`.
+
+- `dlc` is populated **only** when it conveys information different from
+  `len(data)` (remote frames with a declared DLC, CAN FD DLC codes). For
+  ordinary data frames use `len(frame.data)`.
+- `channel` comes from the log's channel column, or the trailing digits of a
+  candump interface name (`vcan0` → `0`; no digits → `None`).
+
+`LogMeta` (from `probe()`): `format` (reader name), `start_time`
+(`datetime | None` — only `vector-asc` currently records one; naive, from the
+file's `date` header), `extra: dict[str, str]`.
+
+## Coming from python-can
+
+| python-can habit | capkit reality |
+|---|---|
+| `can.LogReader(path)` yields `can.Message` | `capkit.read(path)` yields frozen `capkit.Frame` |
+| `can.Bus(...)`, `Notifier`, live capture | out of scope — capkit reads finished files only |
+| `msg.data` is a mutable `bytearray` | `frame.data` is immutable `bytes` |
+| `msg.dlc` always set | `frame.dlc` is `None` unless it differs from `len(data)` |
+| `msg.is_rx` defaults to `True` | `frame.is_rx` is `None` when the log has no direction column |
+| writers (`can.Logger`, `ASCWriter`) | no writers — export yourself (see recipes) |
+| some readers synthesize absolute timestamps | timestamps pass through as recorded; absolute start via `probe()` |
+
+Both `capkit.Frame` and `can.Message` satisfy dbckit's `FrameLike` protocol,
+so either feeds `dbckit.decode_frames()` — but do not mix python-can parsing
+into a capkit task for formats capkit supports.
+
+## Custom readers
+
+Register a zero-argument reader class to make it available to `read()`,
+`probe()`, and detection:
+
+```python
+from collections.abc import Iterator
+from pathlib import Path
+
+import capkit
+
+
+class MyReader:
+    name: str = "my-format"                      # registry key, lowercased
+    extensions: tuple[str, ...] = (".mylog",)    # dot-prefixed
+
+    def __init__(self, *, strict: bool = False) -> None:   # all options need defaults
+        self.strict = strict
+
+    def sniff(self, sample: str) -> bool:        # first 4 KiB, Latin-1
+        return sample.startswith("MYLOG")
+
+    def probe(self, path: Path) -> capkit.LogMeta:
+        return capkit.LogMeta(format=self.name)
+
+    def read(self, path: Path) -> Iterator[capkit.Frame]:
+        yield from ()                            # generator, O(1) state
+
+
+capkit.register_reader(MyReader)                 # validates immediately, process-global
+```
+
+Duplicate names raise `ValueError`; extension overlaps are legal (sniffing
+disambiguates). Installed packages can instead advertise reader classes in the
+`capkit.readers` entry-point group — discovered lazily on the first `read()` /
+`probe()` / `available_formats()` call, with conflicts and broken entry points
+raising `RuntimeError` naming the entry point and distribution.
+
+## Use with dbckit
+
+capkit and dbckit are separate packages — neither imports the other. Two
+composition patterns:
+
+```python
+import capkit
+import dbckit
+
+# explicit: capkit makes frames, dbckit makes signals
+db = dbckit.load("truck.dbc")
+for decoded in dbckit.decode_frames(db, capkit.read("trace.txt")):
+    print(decoded.timestamp, decoded.signals)
+
+# zero wiring: capkit registers dbckit.readers entry points for
+# .txt, .log, and .asc, so with both installed this just works
+for decoded in dbckit.decode_log(db, "trace.txt"):
+    print(decoded.signals)
+```
+
+capkit's `.asc` entry point deliberately supersedes dbckit's builtin ASC
+reader with the richer implementation. `.txt` and `.log` route through a
+sniffing dispatcher, so any log whose content matches a capkit reader resolves
+correctly regardless of what the extension suggests.
+
+## Hard limits — don't fight these
+
+- **No signal decoding, ever.** Anything involving a DBC, signals, or physical
+  values is dbckit's job; compose as above.
+- **Supported readers in 0.2.0: `candump`, `kvaser-txt`, `vector-asc`.**
+  PCAN TRC, generic CSV, pcap/pcapng, Vector BLF, and ASAM MF4 are roadmap
+  items — `capkit.read("x.trc")` raises unknown-format `ValueError` today; do
+  not invent support for them.
+- Paths only: no file-object or stdin input, no gzip transparency (roadmap).
+- Kvaser dialects with absolute date headers (Memorator style) are
+  unsupported; `probe()` returns `start_time=None` for `kvaser-txt` and
+  `candump`.
+- Vector ASC `timestamps relative` directives and non-English month names are
+  rejected with clear errors instead of being interpreted approximately.
+- No writers, no CLI, no dataframe export in core — `Frame` is a dataclass,
+  so `dataclasses.asdict()` feeds pandas directly (see recipes).
+
+## Full reference
+
+Bundled with this skill — read them instead of searching installed sources or
+the web when a question goes beyond this file:
+
+- `references/recipes.md` — counting IDs, filtering, time windows, cycle-time
+  estimation, CSV export, dataframes — all a few lines of standard library
+- `references/api-reference.md` — the complete public API contract, every
+  model field, function signature, error message, and reader class
+- `references/format-support.md` — the exact dialect each reader accepts,
+  per-format supported/unsupported lists, and fixture provenance

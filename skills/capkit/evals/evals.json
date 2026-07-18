@@ -1,0 +1,26 @@
+{
+  "skill_name": "capkit",
+  "evals": [
+    {
+      "id": 0,
+      "eval_name": "stream-kvaser-golden",
+      "prompt": "You have a CAN capture log at trace.txt in your working directory (a Kvaser CanKing TXT export) and the capkit Python library is installed (use the venv python you are told about). Write and run a script that streams the log with capkit and reports: the total frame count, and for both the first and the last frame the timestamp, arbitration ID (hex), data bytes (hex), channel, extended-frame flag, and direction. Write the results to results.txt.",
+      "expected_output": "results.txt reports 300 frames; the first frame has timestamp 100.000139, arbitration ID 0x0CFBFFDB, data 1B3120EBB3FFD9FF, channel 0, extended-frame True, received (is_rx True); the last frame has timestamp 100.589590 and arbitration ID 0x18F964C8.",
+      "files": ["trace.txt"]
+    },
+    {
+      "id": 1,
+      "eval_name": "probe-and-detect",
+      "prompt": "Using the capkit Python library (installed in the venv you are told about): capture.asc in your working directory is a CAN log. Without passing format= anywhere, probe the file and report the detected format and the absolute capture start time, then read it and report the total frame count and how many frames are CAN FD, error, and remote frames. Write the findings to probe.txt.",
+      "expected_output": "probe.txt reports format vector-asc, start time 2017-09-30 15:06:13.191000, 20 frames total, 4 CAN FD frames, 4 error frames, and 4 remote frames.",
+      "files": ["capture.asc"]
+    },
+    {
+      "id": 2,
+      "eval_name": "custom-reader-registration",
+      "prompt": "The capkit Python library is installed (use the venv python you are told about). Write and run a script that: (1) creates a file readings.mylog whose lines look like 'T=1.5 ID=1A2 DATA=DEADBEEF' (timestamp in seconds, hex identifier, hex payload), (2) implements and registers a capkit reader class named my-format for the .mylog extension that parses those lines into frames, (3) proves registration worked by printing capkit.available_formats(), and (4) reads readings.mylog through capkit.read() — not by calling the reader class directly — printing each frame's timestamp, arbitration ID (hex), and data (hex).",
+      "expected_output": "available_formats() output includes my-format alongside candump, kvaser-txt, and vector-asc, and the example line prints as timestamp 1.5, arbitration ID 0x1A2, data deadbeef (plus matching output for any other lines the script wrote).",
+      "files": []
+    }
+  ]
+}

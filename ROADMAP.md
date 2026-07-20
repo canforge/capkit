@@ -23,7 +23,7 @@ fixture-first: a format lands only with a real capture under `tests/fixtures/<fo
 
 ## Stream operations
 
-- [ ] Filters: by ID set, channel, and time window
+- [x] Filters: by ID set, channel, and time window
 - [ ] Merge several logs into one time-ordered stream (multi-bus and multi-file captures)
 - [ ] Explicit, opt-in timestamp rebasing helper — `read()` itself keeps returning
   timestamps exactly as recorded

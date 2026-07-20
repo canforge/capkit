@@ -1,8 +1,7 @@
 # Recipes
 
-Common tasks on top of the frame stream. None of these are capkit API: `read()`
-returns a lazy iterator of `Frame` objects, so each task is a few lines of
-standard library. Unless noted, every recipe streams in constant memory.
+Common tasks on top of the frame stream. `read()` and `filter_frames()` are
+lazy, so every recipe streams in constant memory unless noted otherwise.
 
 All examples assume:
 
@@ -28,11 +27,16 @@ for arb_id, n in counts.most_common(10):
 ```python
 wanted = {0x0CF00400, 0x18F0093E}
 
-frames = (f for f in capkit.read("trace.txt") if f.arbitration_id in wanted)
+frames = capkit.filter_frames(capkit.read("trace.txt"), arbitration_ids=wanted)
 ```
 
-The same pattern filters on any `Frame` field — `channel`, `is_extended_frame`,
-`is_rx`, and so on.
+## Keep only some channels
+
+`None` selects frames whose source did not record a channel:
+
+```python
+frames = capkit.filter_frames(capkit.read("trace.txt"), channels={1, 2, None})
+```
 
 ## Slice a time window
 
@@ -40,7 +44,34 @@ Timestamps are seconds exactly as recorded in the source, so compare against
 values from the same log:
 
 ```python
-window = (f for f in capkit.read("trace.txt") if 255.0 <= f.timestamp <= 260.0)
+window = capkit.filter_frames(
+    capkit.read("trace.txt"),
+    start_time=255.0,
+    end_time=260.0,
+)
+```
+
+Both bounds are inclusive. Omit either one for an open-ended window.
+
+## Combine filters
+
+All supplied criteria use AND semantics:
+
+```python
+frames = capkit.filter_frames(
+    capkit.read("trace.txt"),
+    arbitration_ids={0x0CF00400, 0x18F0093E},
+    channels={1, 2},
+    start_time=255.0,
+    end_time=260.0,
+)
+```
+
+`filter_frames()` preserves source order and yields the original frame objects.
+For arbitrary predicates, use a generator expression over the frame stream:
+
+```python
+received = (frame for frame in capkit.read("trace.txt") if frame.is_rx is True)
 ```
 
 ## Estimate a message's cycle time

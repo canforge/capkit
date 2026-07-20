@@ -9,6 +9,11 @@ Versioning will follow [Semantic Versioning](https://semver.org/) from 1.0.0 onw
 
 ## [Unreleased]
 
+### Added
+
+- Lazy `filter_frames()` stream filtering by arbitration IDs, channels, and
+  inclusive time windows, with composable AND semantics and no frame copying.
+
 ### Changed
 
 - Guaranteed zero-registration `dbckit.decode_log()` discovery for Kvaser TXT

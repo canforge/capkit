@@ -1,14 +1,15 @@
 # `capkit` API Reference
 
-Version covered: `0.2.0`
+Version covered: `0.3.0` (unreleased)
 
 This file documents the public Python API exported by `capkit`:
 
-- `read`, `probe`, `available_formats`, `register_reader`
+- `read`, `probe`, `available_formats`, `register_reader`, `filter_frames`
 - `Frame`, `LogMeta`
 
 Also public, importable from their submodules:
 
+- `capkit.operations.filter_frames`
 - `capkit.readers.candump.CandumpReader`
 - `capkit.readers.kvaser_txt.KvaserTxtReader`
 - `capkit.readers.vector_asc.VectorAscReader`
@@ -21,6 +22,8 @@ Internal helpers prefixed with `_` are not public.
 - Models are frozen, slotted dataclasses.
 - `read()` is lazy: nothing is opened or parsed until the returned iterator is
   consumed.
+- `filter_frames()` is lazy: it does not touch its frame iterable until the
+  returned iterator is consumed.
 - Unknown or undetectable formats raise `ValueError`; unreadable paths raise the
   underlying `OSError` subclass, unchanged.
 - Reader options are keyword-only and have defaults; every reader is
@@ -60,6 +63,39 @@ Fields:
 - `extra: dict[str, str] = {}` — reader-specific header values
 
 ## Functions
+
+### `filter_frames()`
+
+```python
+filter_frames(
+    frames: Iterable[Frame],
+    *,
+    arbitration_ids: Iterable[int] | None = None,
+    channels: Iterable[int | None] | None = None,
+    start_time: float | None = None,
+    end_time: float | None = None,
+) -> Iterator[Frame]
+```
+
+Returns a lazy iterator over the frames that match every supplied criterion:
+
+- `arbitration_ids` accepts one or more CAN arbitration IDs.
+- `channels` accepts one or more channel values, including `None` for frames
+  whose source did not record a channel.
+- `start_time` and `end_time` are inclusive. Either bound may be omitted.
+
+Omitted criteria are unrestricted, while a supplied empty ID or channel
+iterable matches no frames. Multiple criteria compose with AND semantics.
+
+The ID and channel iterables are snapshotted when `filter_frames()` is called;
+the frame iterable is not touched until the returned iterator is advanced. The
+helper consumes only as far as the next match, never reads beyond a yielded
+frame, preserves input order, and yields the original `Frame` objects without
+copying them. It does not assume timestamp ordering, so it scans the full input
+rather than stopping after a timestamp exceeds `end_time`.
+
+Passing both time bounds with `start_time > end_time` raises `ValueError`
+without consuming the frame iterable.
 
 ### `read()`
 
@@ -141,6 +177,7 @@ resolved through content sniffing.
 - Failed detection: `Unknown log format for 'file'. Available formats: ...`
 - Duplicate registration: `Log format 'name' is already registered.`
 - Invalid reader class: `TypeError` at registration time.
+- Reversed filter time window: `start_time must be less than or equal to end_time`.
 - Unreadable path: the underlying `OSError` subclass.
 - Invalid record: `ValueError` naming the format, source line, and mismatch.
 

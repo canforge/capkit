@@ -12,7 +12,11 @@ FIXTURE = Path(__file__).parent / "fixtures" / "kvaser" / "kvaser.txt"
 
 
 def test_root_exports_are_intentionally_small() -> None:
-    assert capkit.__all__ == ["Frame", "LogMeta", "read", "probe", "available_formats", "register_reader"]
+    assert capkit.__all__ == [
+        "Frame", "LogMeta",
+        "read", "probe", "available_formats", "register_reader",
+        "filter_frames",
+    ]
 
 
 def test_registered_readers_are_zero_argument_constructible() -> None:

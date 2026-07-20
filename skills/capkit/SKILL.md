@@ -4,8 +4,9 @@ description: >
   Correct usage of the capkit Python library for reading CAN bus capture
   logs (Kvaser CanKing TXT, candump, Vector ASC) into one common frame
   stream: streaming frames, probing header metadata, format detection and
-  sniffing, strict mode, custom reader registration, and feeding frames
-  into dbckit for DBC signal decoding. Use this skill whenever a task
+  sniffing, lazy ID/channel/time-window filtering, strict mode, custom reader
+  registration, and feeding frames into dbckit for DBC signal decoding. Use
+  this skill whenever a task
   involves CAN capture, log, or trace files (.txt, .log, .asc), CAN frame
   streams, or log-format conversion in a project that has capkit installed
   or mentions capkit — even if the request doesn't name the library. This
@@ -25,9 +26,9 @@ DBC or signal awareness (that is dbckit's job), no hardware I/O, no writers,
 and no CLI. Every supported format parses into the same `Frame` dataclass, so
 downstream code never depends on which tool captured the log.
 
-The public API is six names: `read`, `probe`, `available_formats`,
-`register_reader`, `Frame`, `LogMeta`. Reader classes remain importable from
-`capkit.readers.<module>` for format-specific use.
+The public API is seven names: `read`, `probe`, `available_formats`,
+`register_reader`, `filter_frames`, `Frame`, `LogMeta`. Reader classes remain
+importable from `capkit.readers.<module>` for format-specific use.
 
 ## The rules that prevent silently wrong results
 
@@ -36,6 +37,14 @@ import capkit
 
 for frame in capkit.read("trace.txt"):      # lazy Iterator[Frame]
     print(frame.timestamp, hex(frame.arbitration_id), frame.data.hex())
+
+filtered = capkit.filter_frames(            # also lazy; all criteria use AND
+    capkit.read("trace.txt"),
+    arbitration_ids={0x123, 0x456},
+    channels={1, 2},
+    start_time=10.0,                        # inclusive
+    end_time=20.0,                          # inclusive
+)
 
 meta = capkit.probe("trace.asc")            # header-only; never scans the body
 print(meta.format, meta.start_time)         # "vector-asc", datetime | None
@@ -47,6 +56,12 @@ capkit.available_formats()                  # ['candump', 'kvaser-txt', 'vector-
   returned iterator is consumed — even an unknown-format `ValueError` surfaces
   at the first `next()`, not at the `read()` call. The iterator is consumed
   once; `list()` it for multiple passes, or call `read()` again.
+- **`filter_frames()` is lazy and identity-preserving.** It accepts any frame
+  iterable, combines ID/channel/time criteria with AND semantics, preserves
+  source order, and yields the original frame objects. Empty ID or channel
+  collections match nothing; `channels={None}` selects frames without a
+  recorded channel. A reversed time window raises `ValueError` before the
+  frame source is consumed.
 - **Timestamps are exactly as recorded, never rebased.** `kvaser-txt` records
   device-relative seconds, `candump` records epoch seconds, `vector-asc`
   absolute-mode trace seconds. Compare timestamps only against values from the
@@ -195,7 +210,7 @@ ASC path where entry-point precedence is supported.
 
 - **No signal decoding, ever.** Anything involving a DBC, signals, or physical
   values is dbckit's job; compose as above.
-- **Supported readers in 0.2.0: `candump`, `kvaser-txt`, `vector-asc`.**
+- **Supported readers: `candump`, `kvaser-txt`, `vector-asc`.**
   PCAN TRC, generic CSV, pcap/pcapng, Vector BLF, and ASAM MF4 are roadmap
   items — `capkit.read("x.trc")` raises unknown-format `ValueError` today; do
   not invent support for them.
@@ -213,8 +228,8 @@ ASC path where entry-point precedence is supported.
 Bundled with this skill — read them instead of searching installed sources or
 the web when a question goes beyond this file:
 
-- `references/recipes.md` — counting IDs, filtering, time windows, cycle-time
-  estimation, CSV export, dataframes — all a few lines of standard library
+- `references/recipes.md` — counting IDs, frame-stream filters, cycle-time
+  estimation, CSV export, and dataframes
 - `references/api-reference.md` — the complete public API contract, every
   model field, function signature, error message, and reader class
 - `references/format-support.md` — the exact dialect each reader accepts,

@@ -1,6 +1,6 @@
 # Roadmap
 
-capkit 0.2.0 is [on PyPI](https://pypi.org/project/capkit/); the release checklist is complete
+capkit 0.3.0 is [on PyPI](https://pypi.org/project/capkit/); the release checklist is complete
 and retired (the release process lives in [docs/releasing.md](docs/releasing.md)). Readers are
 fixture-first: a format lands only with a real capture under `tests/fixtures/<format>/`.
 

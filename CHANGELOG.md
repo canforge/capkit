@@ -3,11 +3,11 @@
 All notable changes to capkit are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Versioning will follow [Semantic Versioning](https://semver.org/) from 1.0.0 onward.
+Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased]
+## [0.3.0] — 2026-07-20
 
 ### Added
 

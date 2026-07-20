@@ -1,6 +1,6 @@
 # `capkit` API Reference
 
-Version covered: `0.3.0` (unreleased)
+Version covered: `0.3.0`
 
 This file documents the public Python API exported by `capkit`:
 

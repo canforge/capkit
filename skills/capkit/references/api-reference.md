@@ -4,12 +4,14 @@ Version covered: `0.3.0` (unreleased)
 
 This file documents the public Python API exported by `capkit`:
 
-- `read`, `probe`, `available_formats`, `register_reader`, `filter_frames`
+- `read`, `probe`, `available_formats`, `register_reader`, `filter_frames`,
+  `merge_frames`
 - `Frame`, `LogMeta`
 
 Also public, importable from their submodules:
 
 - `capkit.operations.filter_frames`
+- `capkit.operations.merge_frames`
 - `capkit.readers.candump.CandumpReader`
 - `capkit.readers.kvaser_txt.KvaserTxtReader`
 - `capkit.readers.vector_asc.VectorAscReader`
@@ -23,6 +25,8 @@ Internal helpers prefixed with `_` are not public.
 - `read()` is lazy: nothing is opened or parsed until the returned iterator is
   consumed.
 - `filter_frames()` is lazy: it does not touch its frame iterable until the
+  returned iterator is consumed.
+- `merge_frames()` is lazy: it does not touch its frame iterables until the
   returned iterator is consumed.
 - Unknown or undetectable formats raise `ValueError`; unreadable paths raise the
   underlying `OSError` subclass, unchanged.
@@ -96,6 +100,39 @@ rather than stopping after a timestamp exceeds `end_time`.
 
 Passing both time bounds with `start_time > end_time` raises `ValueError`
 without consuming the frame iterable.
+
+### `merge_frames()`
+
+```python
+merge_frames(*streams: Iterable[Frame]) -> Iterator[Frame]
+```
+
+Merges any number of frame iterables into one lazy, timestamp-ordered iterator.
+Each input must already be ordered by nondecreasing `Frame.timestamp`; the
+helper merges ordered sources but does not sort an individual source.
+
+The inputs are positional. When frames from different inputs have equal
+timestamps, all available frames from the lower-indexed input are yielded
+first. Order within each input is always preserved, including for equal
+timestamps.
+
+Calling `merge_frames()` does not touch its inputs. The first iteration reads
+one frame from each input to establish the earliest head. Thereafter it keeps
+at most one head per active input and advances only the source whose frame was
+just yielded, using memory proportional to the number of inputs rather than
+the total frame count. Empty inputs and exhausted streams are skipped; passing
+no streams returns an empty iterator.
+
+Frames are yielded unchanged and without copying, so their timestamps and all
+other fields retain their exact values and object identity. Inputs therefore
+need timestamps on a comparable time base; timestamp rebasing is a separate,
+explicit operation.
+
+Ordering is validated incrementally as each source advances. If a frame has a
+timestamp smaller than the preceding frame from the same source,
+`merge_frames()` raises `ValueError` identifying the zero-based input index and
+both timestamps. Equal timestamps are valid. Frames yielded before a later
+violation is encountered cannot be retracted.
 
 ### `read()`
 
@@ -178,6 +215,7 @@ resolved through content sniffing.
 - Duplicate registration: `Log format 'name' is already registered.`
 - Invalid reader class: `TypeError` at registration time.
 - Reversed filter time window: `start_time must be less than or equal to end_time`.
+- Out-of-order merge input: `input stream N is not time-ordered: timestamp ... follows ...`.
 - Unreadable path: the underlying `OSError` subclass.
 - Invalid record: `ValueError` naming the format, source line, and mismatch.
 

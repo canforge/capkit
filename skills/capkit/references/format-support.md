@@ -20,6 +20,11 @@ supports. A reader is added only when a real captured fixture pins its dialect u
 
 Only supported rows are registered as readers or advertised through package entry points.
 
+Readers yield recognized frame records in file order without sorting or
+rebasing their timestamps. `merge_frames()` can combine reader outputs that
+are already nondecreasing and share a comparable time base; it validates each
+source incrementally and raises `ValueError` if a timestamp moves backwards.
+
 ### dbckit integration
 
 capkit reader names describe dialects; dbckit's `dbckit.readers` entry-point

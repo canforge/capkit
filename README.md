@@ -14,6 +14,7 @@ Use it to:
 
 - read captures from different tools as one lazy stream of typed `Frame` objects
 - filter frame streams lazily by arbitration ID, channel, and timestamp
+- merge already-time-ordered frame streams lazily across files or buses
 - probe a file for header metadata without scanning the frame body
 - detect the log format from the file extension or the file content
 - skip real-world log noise by default, or reject it with `strict=True`
@@ -68,6 +69,12 @@ filtered = capkit.filter_frames(
     end_time=20.0,
 )
 
+# merge ordered captures that share a time base
+merged = capkit.merge_frames(
+    capkit.read("powertrain.asc"),
+    capkit.read("body.asc"),
+)
+
 # header metadata only
 meta = capkit.probe("trace.txt")
 print(meta.format, meta.start_time)
@@ -76,8 +83,8 @@ print(meta.format, meta.start_time)
 print(capkit.available_formats())   # ['candump', 'kvaser-txt', 'vector-asc']
 ```
 
-The public API is seven names: `read`, `probe`, `available_formats`,
-`register_reader`, `filter_frames`, `Frame`, and `LogMeta`.
+The public API is eight names: `read`, `probe`, `available_formats`,
+`register_reader`, `filter_frames`, `merge_frames`, `Frame`, and `LogMeta`.
 
 ## Features
 
@@ -191,8 +198,8 @@ for decoded in dbckit.decode_log(db, "trace.txt"):
 - [Format support](docs/format-support.md) — supported formats and the exact
   dialect each reader accepts
 - [API reference](docs/api-reference.md) — the public API contract
-- [Recipes](docs/recipes.md) — counting IDs, filtering frame streams, cycle-time
-  estimation, CSV export, and dataframes
+- [Recipes](docs/recipes.md) — counting IDs, filtering and merging frame
+  streams, cycle-time estimation, CSV export, and dataframes
 
 ## Development
 

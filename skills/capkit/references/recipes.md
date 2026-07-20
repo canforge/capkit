@@ -1,7 +1,8 @@
 # Recipes
 
-Common tasks on top of the frame stream. `read()` and `filter_frames()` are
-lazy, so every recipe streams in constant memory unless noted otherwise.
+Common tasks on top of the frame stream. `read()`, `filter_frames()`, and
+`merge_frames()` are lazy, so every recipe streams in constant memory unless
+noted otherwise.
 
 All examples assume:
 
@@ -73,6 +74,31 @@ For arbitrary predicates, use a generator expression over the frame stream:
 ```python
 received = (frame for frame in capkit.read("trace.txt") if frame.is_rx is True)
 ```
+
+## Merge time-ordered logs
+
+Merge captures from multiple files or buses whose timestamps use the same time
+base:
+
+```python
+frames = capkit.merge_frames(
+    capkit.read("powertrain.asc"),
+    capkit.read("body.asc"),
+    capkit.read("diagnostics.asc"),
+)
+
+for frame in frames:
+    print(frame.timestamp, frame.channel, frame.data.hex())
+```
+
+Every input must already be ordered by nondecreasing timestamp. Equal
+timestamps are deterministic: frames from the earlier positional input come
+first, while order within each input is preserved. The helper buffers at most
+one frame per active input and yields the original frame objects.
+
+`merge_frames()` does not change timestamps. Do not directly merge relative
+timestamps from unrelated captures or mix relative and epoch timestamps;
+rebase them explicitly onto a common time base first.
 
 ## Estimate a message's cycle time
 

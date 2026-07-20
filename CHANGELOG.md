@@ -13,6 +13,8 @@ Versioning will follow [Semantic Versioning](https://semver.org/) from 1.0.0 onw
 
 - Lazy `filter_frames()` stream filtering by arbitration IDs, channels, and
   inclusive time windows, with composable AND semantics and no frame copying.
+- Lazy `merge_frames()` k-way merging for preordered frame streams, with
+  deterministic equal-timestamp ordering and incremental order validation.
 
 ### Changed
 

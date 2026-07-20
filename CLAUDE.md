@@ -64,8 +64,12 @@ path ──> readers/__init__.py  (registry: format= > unique extension > 4 KiB 
   `asc` directly to `VectorAscReader` and `log`/`txt` to the dispatcher. One entry point
   per extension ecosystem-wide (dbckit raises on duplicates), and generic extensions go
   through the dispatcher only — never a concrete format reader.
-- **`writers/`, `operations/`** — reserved and empty on purpose; don't populate them
-  ahead of the roadmap.
+- **`operations/`** — lazy, dependency-free stream operations over frame iterables
+  (`filter_frames`, `merge_frames`, `rebase_timestamps`, `decompose_j1939_id`), all
+  re-exported from the package root. They accept iterables and return iterators without
+  materializing, reordering, or mutating frames; `rebase_timestamps` is the only opt-in
+  timestamp transform — readers still never rebase.
+- **`writers/`** — reserved and empty on purpose; don't populate it ahead of the roadmap.
 
 ## The dbckit contract (structural, test-enforced)
 

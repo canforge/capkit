@@ -176,11 +176,21 @@ Vector CANalyzer/CANoe ASC text logs.
 
 ### `DispatchReader`
 
-`capkit.integration.DispatchReader` — the adapter registered in the
-`dbckit.readers` entry-point group for the generic `.txt` and `.log`
-extensions. It sniffs file content and delegates to the matching capkit reader;
-it never trusts the extension alone. Vector `.asc` is registered directly to
-`VectorAscReader`.
+`capkit.integration.DispatchReader` — the adapter used for generic extensions
+in dbckit's reader registry. capkit publishes exactly these extension-keyed
+entries:
+
+- `asc = capkit.readers.vector_asc:VectorAscReader`
+- `log = capkit.integration:DispatchReader`
+- `txt = capkit.integration:DispatchReader`
+
+dbckit interprets each entry-point name as a file extension without the leading
+dot. The keys are therefore `asc`, `log`, and `txt`, not capkit's reader names
+`vector-asc`, `candump`, and `kvaser-txt`. `DispatchReader` sniffs file content
+and delegates to the matching capkit reader, preserving content-based
+disambiguation when readers share an extension. Vector `.asc` is registered
+directly to `VectorAscReader` so capkit takes over dbckit's ASC path where
+entry-point precedence is supported.
 
 - `DispatchReader(*, strict: bool = False, **reader_options)`
 - `read(path)` yields frames from the sniffed reader

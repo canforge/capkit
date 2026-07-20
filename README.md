@@ -152,9 +152,13 @@ for decoded in dbckit.decode_frames(db, capkit.read("trace.txt")):
     print(decoded.timestamp, decoded.signals)
 ```
 
-capkit also registers its readers in dbckit's `dbckit.readers` entry-point
-group. With both packages installed, `dbckit.decode_log()` reads `.txt`,
-`.log`, and `.asc` logs through capkit directly:
+capkit also publishes exactly three extension-keyed entries in dbckit's
+`dbckit.readers` group: `txt` and `log` use capkit's sniffing
+`DispatchReader`, while `asc` uses `VectorAscReader` directly. These keys are
+file extensions, not capkit reader names: the corresponding capkit formats are
+`kvaser-txt`, `candump`, and `vector-asc`. With both packages installed,
+`dbckit.decode_log()` therefore reads `.txt`, `.log`, and `.asc` logs through
+capkit without manual registration:
 
 ```python
 for decoded in dbckit.decode_log(db, "trace.txt"):

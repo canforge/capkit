@@ -177,16 +177,19 @@ db = dbckit.load("truck.dbc")
 for decoded in dbckit.decode_frames(db, capkit.read("trace.txt")):
     print(decoded.timestamp, decoded.signals)
 
-# zero wiring: capkit registers dbckit.readers entry points for
-# .txt, .log, and .asc, so with both installed this just works
+# zero wiring: capkit registers extension-keyed dbckit.readers entry points
+# named txt, log, and asc, so with both installed this just works
 for decoded in dbckit.decode_log(db, "trace.txt"):
     print(decoded.signals)
 ```
 
-capkit's `.asc` entry point deliberately supersedes dbckit's builtin ASC
-reader with the richer implementation. `.txt` and `.log` route through a
-sniffing dispatcher, so any log whose content matches a capkit reader resolves
-correctly regardless of what the extension suggests.
+The entry-point keys are file extensions, not capkit reader names: `txt` maps
+to `kvaser-txt`, `log` maps to `candump`, and `asc` maps to `vector-asc` for the
+fixtures currently shipped. The generic `txt` and `log` entries use a sniffing
+dispatcher, so any log whose content matches a capkit reader resolves correctly
+regardless of what the extension suggests. The `asc` entry directly exposes
+capkit's richer `VectorAscReader` and deliberately takes over dbckit's built-in
+ASC path where entry-point precedence is supported.
 
 ## Hard limits — don't fight these
 

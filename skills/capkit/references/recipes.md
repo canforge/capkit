@@ -87,5 +87,25 @@ print(df.groupby("arbitration_id").size().sort_values(ascending=False).head())
 ## Decode signals
 
 Signal decoding needs a DBC database and lives in
-[dbckit](https://github.com/canforge/dbckit) — see
-[Use with dbckit](../README.md#use-with-dbckit) in the README.
+[dbckit](https://github.com/canforge/dbckit). The explicit composition works for
+every capkit-supported format and does not depend on reader registration:
+
+```python
+import dbckit
+
+db = dbckit.load("truck.dbc")
+for decoded in dbckit.decode_frames(db, capkit.read("trace.txt")):
+    print(decoded.timestamp, decoded.signals)
+```
+
+When both packages are installed, capkit's extension-keyed `dbckit.readers`
+entries also make the file-oriented shortcut work without manual registration:
+
+```python
+for decoded in dbckit.decode_log(db, "trace.txt"):
+    print(decoded.timestamp, decoded.signals)
+```
+
+The entry-point keys are `txt`, `log`, and `asc`; the corresponding capkit
+reader names are `kvaser-txt`, `candump`, and `vector-asc`. Generic `.txt` and
+`.log` files still go through content sniffing.

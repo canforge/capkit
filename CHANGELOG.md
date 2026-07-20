@@ -7,6 +7,15 @@ Versioning will follow [Semantic Versioning](https://semver.org/) from 1.0.0 onw
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- Guaranteed zero-registration `dbckit.decode_log()` discovery for Kvaser TXT
+  (`txt`), candump (`log`), and Vector ASC (`asc`) through exact, package-guarded
+  entry-point mappings, while retaining `decode_frames(db, capkit.read(path))`
+  as the registration-independent composition.
+
 ## [0.2.0] — 2026-07-16
 
 ### Added

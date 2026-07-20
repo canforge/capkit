@@ -20,6 +20,15 @@ supports. A reader is added only when a real captured fixture pins its dialect u
 
 Only supported rows are registered as readers or advertised through package entry points.
 
+### dbckit integration
+
+capkit reader names describe dialects; dbckit's `dbckit.readers` entry-point
+names describe file extensions. The package maps `txt` and `log` to the
+content-sniffing `capkit.integration.DispatchReader`, and maps `asc` directly
+to `capkit.readers.vector_asc.VectorAscReader`. It deliberately does not publish
+entries named `kvaser-txt`, `candump`, or `vector-asc`, which dbckit would
+interpret as nonexistent filename suffixes.
+
 ---
 
 ## Kvaser CanKing TXT (`kvaser-txt`)

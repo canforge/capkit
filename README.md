@@ -16,6 +16,8 @@ Use it to:
 - filter frame streams lazily by arbitration ID, channel, and timestamp
 - rebase timestamps lazily and explicitly without changing reader behavior
 - merge already-time-ordered frame streams lazily across files or buses
+- decompose J1939 arbitration IDs into priority, PGN, source, and optional
+  PDU1 destination addresses
 - probe a file for header metadata without scanning the frame body
 - detect the log format from the file extension or the file content
 - skip real-world log noise by default, or reject it with `strict=True`
@@ -48,6 +50,8 @@ Requires Python `>=3.11`. capkit has no runtime dependencies.
 - `read()` is lazy and keeps constant parser state, so file size does not matter.
 - `read()` returns timestamps exactly as recorded in the source; the separate
   `rebase_timestamps()` operation changes them only when explicitly requested.
+- `decompose_j1939_id()` is pure per-ID arithmetic with no DBC or signal
+  awareness and no dependency on dbckit.
 - A format is added only when a real captured fixture pins its dialect under
   `tests/fixtures/`; unsupported dialects fail clearly instead of parsing
   approximately.
@@ -60,6 +64,10 @@ import capkit
 # stream frames
 for frame in capkit.read("trace.txt"):
     print(frame.timestamp, hex(frame.arbitration_id), frame.data.hex())
+
+# inspect a J1939 ID without a DBC
+j1939 = capkit.decompose_j1939_id(0x18EF20A5)
+print(j1939.priority, hex(j1939.pgn), j1939.source_address, j1939.destination_address)
 
 # compose lazy stream filters with inclusive time bounds
 filtered = capkit.filter_frames(
@@ -87,11 +95,19 @@ print(meta.format, meta.start_time)
 print(capkit.available_formats())   # ['candump', 'kvaser-txt', 'vector-asc']
 ```
 
-The public API is nine names: `read`, `probe`, `available_formats`,
-`register_reader`, `filter_frames`, `merge_frames`, `rebase_timestamps`,
-`Frame`, and `LogMeta`.
+The public API is eleven names: `read`, `probe`, `available_formats`,
+`register_reader`, `decompose_j1939_id`, `filter_frames`, `merge_frames`,
+`rebase_timestamps`, `Frame`, `LogMeta`, and `J1939Fields`.
 
 ## Features
+
+### Inspect J1939 identifiers
+
+`decompose_j1939_id()` validates a clean 29-bit arbitration ID and returns a
+frozen `J1939Fields` value containing its priority, PGN, source address, and
+optional PDU1 destination address. PDU1 destination bytes are excluded from
+the PGN; PDU2 group extensions remain part of it. This operation is immediate,
+dependency-free arithmetic and does not require a `Frame` or DBC.
 
 ### Format detection
 
@@ -165,6 +181,10 @@ database. capkit and dbckit are separate packages — neither depends on or
 imports the other — with adjacent jobs: capkit turns bytes on disk into frames,
 dbckit turns frames plus a DBC into signals.
 
+For J1939, `capkit.decompose_j1939_id()` exposes fields from each raw frame ID.
+dbckit remains responsible for using derived PGNs to match DBC messages and
+decode signals.
+
 ```python
 import capkit
 import dbckit
@@ -203,8 +223,8 @@ for decoded in dbckit.decode_log(db, "trace.txt"):
 - [Format support](docs/format-support.md) — supported formats and the exact
   dialect each reader accepts
 - [API reference](docs/api-reference.md) — the public API contract
-- [Recipes](docs/recipes.md) — counting IDs, filtering and merging frame
-  streams, cycle-time estimation, CSV export, and dataframes
+- [Recipes](docs/recipes.md) — counting and decomposing IDs, filtering and
+  merging frame streams, cycle-time estimation, CSV export, and dataframes
 
 ## Development
 

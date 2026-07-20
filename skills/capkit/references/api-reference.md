@@ -5,12 +5,14 @@ Version covered: `0.3.0` (unreleased)
 This file documents the public Python API exported by `capkit`:
 
 - `read`, `probe`, `available_formats`, `register_reader`, `filter_frames`,
-  `merge_frames`, `rebase_timestamps`
-- `Frame`, `LogMeta`
+  `merge_frames`, `rebase_timestamps`, `decompose_j1939_id`
+- `Frame`, `LogMeta`, `J1939Fields`
 
 Also public, importable from their submodules:
 
+- `capkit.operations.J1939Fields`
 - `capkit.operations.filter_frames`
+- `capkit.operations.decompose_j1939_id`
 - `capkit.operations.merge_frames`
 - `capkit.operations.rebase_timestamps`
 - `capkit.readers.candump.CandumpReader`
@@ -23,6 +25,8 @@ Internal helpers prefixed with `_` are not public.
 ## API conventions
 
 - Models are frozen, slotted dataclasses.
+- `decompose_j1939_id()` is immediate, dependency-free arithmetic over one
+  integer; it does not inspect a `Frame`, DBC, or signal model.
 - `read()` is lazy: nothing is opened or parsed until the returned iterator is
   consumed.
 - `filter_frames()` is lazy: it does not touch its frame iterable until the
@@ -69,7 +73,53 @@ Fields:
   records one; `kvaser-txt` currently always returns `None`
 - `extra: dict[str, str] = {}` — reader-specific header values
 
+### `J1939Fields`
+
+A frozen, slotted result returned by `decompose_j1939_id()`.
+
+Fields:
+
+- `priority: int` — the three-bit J1939 priority
+- `pgn: int` — the derived 18-bit parameter group number
+- `source_address: int` — the transmitting ECU address
+- `destination_address: int | None` — the PDU1 destination; `None` for PDU2,
+  where the PDU-specific byte is a group extension included in `pgn`
+
 ## Functions
+
+### `decompose_j1939_id()`
+
+```python
+decompose_j1939_id(arbitration_id: int) -> J1939Fields
+```
+
+Decomposes a clean 29-bit J1939 arbitration ID into frame-level fields. The
+result retains the ID's priority and source address and derives its PGN from
+the extended data-page, data-page, PDU-format, and PDU-specific bits.
+
+When the PDU format is below `0xF0` (PDU1), the PDU-specific byte is a
+destination address. It is returned as `destination_address` and cleared from
+the PGN. At `0xF0` and above (PDU2), that byte is a group extension, remains in
+the PGN, and `destination_address` is `None`.
+
+```python
+fields = decompose_j1939_id(0x18EF20A5)
+
+assert fields.priority == 6
+assert fields.pgn == 0xEF00
+assert fields.source_address == 0xA5
+assert fields.destination_address == 0x20
+```
+
+The helper accepts every integer in `0x00000000..0x1FFFFFFF`; it does not
+require the high-order bits to be nonzero or separately inspect an
+`is_extended_frame` flag. Non-integer values raise `TypeError`. Integers below
+zero or above `0x1FFFFFFF` raise `ValueError`.
+
+This is raw frame-ID arithmetic only. It neither reads DBC `PGN` attributes
+nor matches or decodes messages. dbckit's J1939 matching remains the
+DBC-aware layer and can consume frames produced by capkit without either
+package importing the other.
 
 ### `filter_frames()`
 
@@ -259,6 +309,9 @@ resolved through content sniffing.
 - Failed detection: `Unknown log format for 'file'. Available formats: ...`
 - Duplicate registration: `Log format 'name' is already registered.`
 - Invalid reader class: `TypeError` at registration time.
+- Non-integer J1939 ID: `arbitration_id must be an integer` (`TypeError`).
+- Out-of-range J1939 ID: `arbitration_id must be between 0x00000000 and 0x1FFFFFFF`
+  (`ValueError`).
 - Reversed filter time window: `start_time must be less than or equal to end_time`.
 - Out-of-order merge input: `input stream N is not time-ordered: timestamp ... follows ...`.
 - Unreadable path: the underlying `OSError` subclass.

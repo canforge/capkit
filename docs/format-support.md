@@ -27,6 +27,12 @@ combine reader outputs that are already nondecreasing and share a comparable
 time base; it validates each source incrementally and raises `ValueError` if a
 timestamp moves backwards.
 
+Readers preserve arbitration IDs as recorded. `decompose_j1939_id()` is a
+separate, format-independent operation over a clean 29-bit ID: it returns
+priority, PGN, source address, and the optional PDU1 destination address
+without changing a frame or consulting a DBC. Callers should use
+`Frame.is_extended_frame` when selecting J1939 frames from mixed captures.
+
 ### dbckit integration
 
 capkit reader names describe dialects; dbckit's `dbckit.readers` entry-point
@@ -35,6 +41,10 @@ content-sniffing `capkit.integration.DispatchReader`, and maps `asc` directly
 to `capkit.readers.vector_asc.VectorAscReader`. It deliberately does not publish
 entries named `kvaser-txt`, `candump`, or `vector-asc`, which dbckit would
 interpret as nonexistent filename suffixes.
+
+The J1939 helper remains on capkit's frame side of this boundary. dbckit may
+derive the same PGN while matching a frame to a DBC message, but DBC lookup and
+signal decoding are deliberately not part of capkit.
 
 ---
 

@@ -5,8 +5,9 @@ description: >
   logs (Kvaser CanKing TXT, candump, Vector ASC) into one common frame
   stream: streaming frames, probing header metadata, format detection and
   sniffing, lazy ID/channel/time-window filtering, explicit lazy timestamp
-  rebasing, lazy merging of ordered streams, strict mode, custom reader
-  registration, and feeding frames into dbckit for DBC signal decoding. Use
+  rebasing, lazy merging of ordered streams, dependency-free J1939 ID
+  decomposition, strict mode, custom reader registration, and feeding frames
+  into dbckit for DBC signal decoding. Use
   this skill whenever a task
   involves CAN capture, log, or trace files (.txt, .log, .asc), CAN frame
   streams, or log-format conversion in a project that has capkit installed
@@ -27,10 +28,10 @@ DBC or signal awareness (that is dbckit's job), no hardware I/O, no writers,
 and no CLI. Every supported format parses into the same `Frame` dataclass, so
 downstream code never depends on which tool captured the log.
 
-The public API is nine names: `read`, `probe`, `available_formats`,
-`register_reader`, `filter_frames`, `merge_frames`, `rebase_timestamps`,
-`Frame`, `LogMeta`. Reader classes remain importable from
-`capkit.readers.<module>` for format-specific use.
+The public API is eleven names: `read`, `probe`, `available_formats`,
+`register_reader`, `decompose_j1939_id`, `filter_frames`, `merge_frames`,
+`rebase_timestamps`, `Frame`, `LogMeta`, `J1939Fields`. Reader classes remain
+importable from `capkit.readers.<module>` for format-specific use.
 
 ## The rules that prevent silently wrong results
 
@@ -39,6 +40,10 @@ import capkit
 
 for frame in capkit.read("trace.txt"):      # lazy Iterator[Frame]
     print(frame.timestamp, hex(frame.arbitration_id), frame.data.hex())
+
+j1939 = capkit.decompose_j1939_id(0x18EF20A5)
+j1939.priority, j1939.pgn                 # 6, 0xEF00
+j1939.source_address, j1939.destination_address  # 0xA5, 0x20
 
 filtered = capkit.filter_frames(            # also lazy; all criteria use AND
     capkit.read("trace.txt"),
@@ -83,6 +88,11 @@ capkit.available_formats()                  # ['candump', 'kvaser-txt', 'vector-
   `recorded - origin + offset`, where the source origin maps to the output
   offset. It creates frozen replacement frames, changes only timestamps, and
   never reads ahead.
+- **`decompose_j1939_id()` is immediate arithmetic.** It accepts a clean
+  29-bit integer and returns frozen `J1939Fields` containing priority, PGN,
+  source address, and the optional PDU1 destination. PDU1 destination bytes
+  are cleared from the PGN; PDU2 group extensions remain in it. It does not
+  inspect `Frame.is_extended_frame`, a DBC, or any signal model.
 - **Reader timestamps are exactly as recorded.** `kvaser-txt` records
   device-relative seconds, `candump` records epoch seconds, and `vector-asc`
   absolute-mode trace seconds. `read()` never rebases; use the separate helper
@@ -201,8 +211,13 @@ raising `RuntimeError` naming the entry point and distribution.
 
 ## Use with dbckit
 
-capkit and dbckit are separate packages — neither imports the other. Two
-composition patterns:
+capkit and dbckit are separate packages — neither imports the other.
+
+For raw J1939 frame fields, use `capkit.decompose_j1939_id()`. dbckit may
+derive the same PGN to match an incoming frame against DBC messages, then
+decodes signals; capkit performs neither DBC lookup nor decoding.
+
+Two DBC decoding composition patterns:
 
 ```python
 import capkit
@@ -230,7 +245,8 @@ ASC path where entry-point precedence is supported.
 ## Hard limits — don't fight these
 
 - **No signal decoding, ever.** Anything involving a DBC, signals, or physical
-  values is dbckit's job; compose as above.
+  values is dbckit's job; raw J1939 arbitration-ID decomposition is the
+  frame-side exception and remains pure arithmetic.
 - **Supported readers: `candump`, `kvaser-txt`, `vector-asc`.**
   PCAN TRC, generic CSV, pcap/pcapng, Vector BLF, and ASAM MF4 are roadmap
   items — `capkit.read("x.trc")` raises unknown-format `ValueError` today; do
@@ -249,8 +265,9 @@ ASC path where entry-point precedence is supported.
 Bundled with this skill — read them instead of searching installed sources or
 the web when a question goes beyond this file:
 
-- `references/recipes.md` — counting IDs, frame-stream filters, timestamp
-  rebasing and merging, cycle-time estimation, CSV export, and dataframes
+- `references/recipes.md` — counting and decomposing IDs, frame-stream
+  filters, timestamp rebasing and merging, cycle-time estimation, CSV export,
+  and dataframes
 - `references/api-reference.md` — the complete public API contract, every
   model field, function signature, error message, and reader class
 - `references/format-support.md` — the exact dialect each reader accepts,

@@ -3,14 +3,14 @@ from __future__ import annotations
 
 from capkit.io import available_formats, probe, read
 from capkit.model import Frame, LogMeta
-from capkit.operations import filter_frames, merge_frames, rebase_timestamps
+from capkit.operations import J1939Fields, decompose_j1939_id, filter_frames, merge_frames, rebase_timestamps
 from capkit.readers import register_reader
 
 __all__ = [
     # model
-    "Frame", "LogMeta",
+    "Frame", "LogMeta", "J1939Fields",
     # io
     "read", "probe", "available_formats", "register_reader",
     # operations
-    "filter_frames", "merge_frames", "rebase_timestamps",
+    "decompose_j1939_id", "filter_frames", "merge_frames", "rebase_timestamps",
 ]

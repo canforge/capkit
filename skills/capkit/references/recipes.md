@@ -23,6 +23,36 @@ for arb_id, n in counts.most_common(10):
     print(f"{arb_id:#010x}  {n}")
 ```
 
+## Inspect J1939 arbitration IDs
+
+Decompose each ID into frame-level J1939 fields without a DBC or signal model:
+
+```python
+for frame in capkit.read("truck.asc"):
+    fields = capkit.decompose_j1939_id(frame.arbitration_id)
+    print(
+        frame.timestamp,
+        fields.priority,
+        f"PGN={fields.pgn:#07x}",
+        f"SA={fields.source_address:#04x}",
+        f"DA={fields.destination_address:#04x}"
+        if fields.destination_address is not None
+        else "broadcast",
+    )
+```
+
+For PDU1 IDs (`PF < 0xF0`), `destination_address` is populated and that byte
+is excluded from `pgn`. For PDU2 IDs, `destination_address` is `None` and the
+group-extension byte remains in `pgn`. The helper validates the 29-bit numeric
+range but does not inspect `frame.is_extended_frame`; filter the stream first
+if a capture mixes standard and extended frames:
+
+```python
+j1939_frames = (frame for frame in capkit.read("mixed.asc") if frame.is_extended_frame)
+for frame in j1939_frames:
+    fields = capkit.decompose_j1939_id(frame.arbitration_id)
+```
+
 ## Keep only some IDs
 
 ```python
@@ -200,6 +230,10 @@ db = dbckit.load("truck.dbc")
 for decoded in dbckit.decode_frames(db, capkit.read("trace.txt")):
     print(decoded.timestamp, decoded.signals)
 ```
+
+`capkit.decompose_j1939_id()` complements this flow when raw priority, PGN,
+source, or destination fields are enough. dbckit remains responsible for
+matching those PGNs to DBC messages and decoding their signals.
 
 When both packages are installed, capkit's extension-keyed `dbckit.readers`
 entries also make the file-oriented shortcut work without manual registration:

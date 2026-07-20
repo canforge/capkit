@@ -17,6 +17,8 @@ Versioning will follow [Semantic Versioning](https://semver.org/) from 1.0.0 onw
   deterministic equal-timestamp ordering and incremental order validation.
 - Lazy, explicit `rebase_timestamps()` translation with first-frame-to-zero
   defaults and configurable source origin and target offset.
+- Dependency-free `decompose_j1939_id()` arithmetic returning frozen priority,
+  PGN, source-address, and optional PDU1 destination fields from 29-bit IDs.
 
 ### Changed
 

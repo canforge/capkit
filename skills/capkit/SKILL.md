@@ -4,9 +4,9 @@ description: >
   Correct usage of the capkit Python library for reading CAN bus capture
   logs (Kvaser CanKing TXT, candump, Vector ASC) into one common frame
   stream: streaming frames, probing header metadata, format detection and
-  sniffing, lazy ID/channel/time-window filtering, lazy merging of ordered
-  streams, strict mode, custom reader registration, and feeding frames into
-  dbckit for DBC signal decoding. Use
+  sniffing, lazy ID/channel/time-window filtering, explicit lazy timestamp
+  rebasing, lazy merging of ordered streams, strict mode, custom reader
+  registration, and feeding frames into dbckit for DBC signal decoding. Use
   this skill whenever a task
   involves CAN capture, log, or trace files (.txt, .log, .asc), CAN frame
   streams, or log-format conversion in a project that has capkit installed
@@ -27,10 +27,10 @@ DBC or signal awareness (that is dbckit's job), no hardware I/O, no writers,
 and no CLI. Every supported format parses into the same `Frame` dataclass, so
 downstream code never depends on which tool captured the log.
 
-The public API is eight names: `read`, `probe`, `available_formats`,
-`register_reader`, `filter_frames`, `merge_frames`, `Frame`, `LogMeta`. Reader
-classes remain importable from `capkit.readers.<module>` for format-specific
-use.
+The public API is nine names: `read`, `probe`, `available_formats`,
+`register_reader`, `filter_frames`, `merge_frames`, `rebase_timestamps`,
+`Frame`, `LogMeta`. Reader classes remain importable from
+`capkit.readers.<module>` for format-specific use.
 
 ## The rules that prevent silently wrong results
 
@@ -46,6 +46,10 @@ filtered = capkit.filter_frames(            # also lazy; all criteria use AND
     channels={1, 2},
     start_time=10.0,                        # inclusive
     end_time=20.0,                          # inclusive
+)
+
+relative = capkit.rebase_timestamps(        # first output timestamp is 0.0
+    capkit.read("capture.log"),
 )
 
 merged = capkit.merge_frames(               # each input is already ordered
@@ -74,10 +78,15 @@ capkit.available_formats()                  # ['candump', 'kvaser-txt', 'vector-
   most one frame per active source, preserves frame identity and source order,
   and breaks equal-timestamp ties by positional source index. A backwards
   timestamp raises `ValueError` when that source is advanced.
-- **Timestamps are exactly as recorded, never rebased.** `kvaser-txt` records
-  device-relative seconds, `candump` records epoch seconds, `vector-asc`
-  absolute-mode trace seconds. Compare timestamps only against values from the
-  same log; the absolute capture start (when the format records one) comes from
+- **`rebase_timestamps()` is lazy and explicit.** By default it maps the first
+  frame's timestamp to zero. With `origin=` and `offset=`, it applies
+  `recorded - origin + offset`, where the source origin maps to the output
+  offset. It creates frozen replacement frames, changes only timestamps, and
+  never reads ahead.
+- **Reader timestamps are exactly as recorded.** `kvaser-txt` records
+  device-relative seconds, `candump` records epoch seconds, and `vector-asc`
+  absolute-mode trace seconds. `read()` never rebases; use the separate helper
+  only when requested. The absolute capture start (when recorded) comes from
   `probe()`, not from the frames.
 - **Frames are frozen, slotted dataclasses.** Assigning to a field raises;
   use `dataclasses.replace(frame, ...)` for a modified copy. `frame.data` is
@@ -240,8 +249,8 @@ ASC path where entry-point precedence is supported.
 Bundled with this skill — read them instead of searching installed sources or
 the web when a question goes beyond this file:
 
-- `references/recipes.md` — counting IDs, frame-stream filters and merging,
-  cycle-time estimation, CSV export, and dataframes
+- `references/recipes.md` — counting IDs, frame-stream filters, timestamp
+  rebasing and merging, cycle-time estimation, CSV export, and dataframes
 - `references/api-reference.md` — the complete public API contract, every
   model field, function signature, error message, and reader class
 - `references/format-support.md` — the exact dialect each reader accepts,

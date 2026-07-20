@@ -14,6 +14,7 @@ Use it to:
 
 - read captures from different tools as one lazy stream of typed `Frame` objects
 - filter frame streams lazily by arbitration ID, channel, and timestamp
+- rebase timestamps lazily and explicitly without changing reader behavior
 - merge already-time-ordered frame streams lazily across files or buses
 - probe a file for header metadata without scanning the frame body
 - detect the log format from the file extension or the file content
@@ -45,8 +46,8 @@ Requires Python `>=3.11`. capkit has no runtime dependencies.
 
 - `Frame` and `LogMeta` are frozen, slotted dataclasses.
 - `read()` is lazy and keeps constant parser state, so file size does not matter.
-- Timestamps are returned exactly as recorded in the source, never rebased or
-  converted to absolute time.
+- `read()` returns timestamps exactly as recorded in the source; the separate
+  `rebase_timestamps()` operation changes them only when explicitly requested.
 - A format is added only when a real captured fixture pins its dialect under
   `tests/fixtures/`; unsupported dialects fail clearly instead of parsing
   approximately.
@@ -69,6 +70,9 @@ filtered = capkit.filter_frames(
     end_time=20.0,
 )
 
+# lazily make the first recorded timestamp zero
+relative = capkit.rebase_timestamps(capkit.read("capture.log"))
+
 # merge ordered captures that share a time base
 merged = capkit.merge_frames(
     capkit.read("powertrain.asc"),
@@ -83,8 +87,9 @@ print(meta.format, meta.start_time)
 print(capkit.available_formats())   # ['candump', 'kvaser-txt', 'vector-asc']
 ```
 
-The public API is eight names: `read`, `probe`, `available_formats`,
-`register_reader`, `filter_frames`, `merge_frames`, `Frame`, and `LogMeta`.
+The public API is nine names: `read`, `probe`, `available_formats`,
+`register_reader`, `filter_frames`, `merge_frames`, `rebase_timestamps`,
+`Frame`, and `LogMeta`.
 
 ## Features
 

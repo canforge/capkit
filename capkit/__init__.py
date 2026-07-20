@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from capkit.io import available_formats, probe, read
 from capkit.model import Frame, LogMeta
-from capkit.operations import filter_frames, merge_frames
+from capkit.operations import filter_frames, merge_frames, rebase_timestamps
 from capkit.readers import register_reader
 
 __all__ = [
@@ -12,5 +12,5 @@ __all__ = [
     # io
     "read", "probe", "available_formats", "register_reader",
     # operations
-    "filter_frames", "merge_frames",
+    "filter_frames", "merge_frames", "rebase_timestamps",
 ]

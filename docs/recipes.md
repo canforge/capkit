@@ -1,8 +1,8 @@
 # Recipes
 
-Common tasks on top of the frame stream. `read()`, `filter_frames()`, and
-`merge_frames()` are lazy, so every recipe streams in constant memory unless
-noted otherwise.
+Common tasks on top of the frame stream. `read()`, `filter_frames()`,
+`rebase_timestamps()`, and `merge_frames()` are lazy, so every recipe streams
+in constant memory unless noted otherwise.
 
 All examples assume:
 
@@ -75,6 +75,52 @@ For arbitrary predicates, use a generator expression over the frame stream:
 received = (frame for frame in capkit.read("trace.txt") if frame.is_rx is True)
 ```
 
+## Rebase timestamps explicitly
+
+Make the first frame start at zero while preserving every timestamp delta:
+
+```python
+frames = capkit.rebase_timestamps(capkit.read("capture.log"))
+
+for frame in frames:
+    print(frame.timestamp)
+```
+
+For an explicit mapping, `origin` is a timestamp in the source time base and
+`offset` is the output timestamp it should map to:
+
+```python
+frames = capkit.rebase_timestamps(
+    capkit.read("capture.log"),
+    origin=1_752_624_000.0,
+    offset=10.0,
+)
+```
+
+The transformation is `recorded_timestamp - origin + offset`; the explicit
+origin need not equal a frame timestamp. This is useful when captures record a
+known synchronization event in different time bases. Map each event to the
+same output offset before merging:
+
+```python
+powertrain = capkit.rebase_timestamps(
+    capkit.read("powertrain.log"),
+    origin=1_752_624_002.5,
+    offset=10.0,
+)
+body = capkit.rebase_timestamps(
+    capkit.read("body.asc"),
+    origin=7.25,
+    offset=10.0,
+)
+
+frames = capkit.merge_frames(powertrain, body)
+```
+
+The helper creates replacement frozen frames with only `timestamp` changed;
+the input frames and all other fields stay unchanged. `read()` itself always
+returns the timestamps recorded by the source.
+
 ## Merge time-ordered logs
 
 Merge captures from multiple files or buses whose timestamps use the same time
@@ -98,7 +144,7 @@ one frame per active input and yields the original frame objects.
 
 `merge_frames()` does not change timestamps. Do not directly merge relative
 timestamps from unrelated captures or mix relative and epoch timestamps;
-rebase them explicitly onto a common time base first.
+use `rebase_timestamps()` to place them explicitly on a common time base first.
 
 ## Estimate a message's cycle time
 

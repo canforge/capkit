@@ -5,13 +5,14 @@ Version covered: `0.3.0` (unreleased)
 This file documents the public Python API exported by `capkit`:
 
 - `read`, `probe`, `available_formats`, `register_reader`, `filter_frames`,
-  `merge_frames`
+  `merge_frames`, `rebase_timestamps`
 - `Frame`, `LogMeta`
 
 Also public, importable from their submodules:
 
 - `capkit.operations.filter_frames`
 - `capkit.operations.merge_frames`
+- `capkit.operations.rebase_timestamps`
 - `capkit.readers.candump.CandumpReader`
 - `capkit.readers.kvaser_txt.KvaserTxtReader`
 - `capkit.readers.vector_asc.VectorAscReader`
@@ -27,6 +28,8 @@ Internal helpers prefixed with `_` are not public.
 - `filter_frames()` is lazy: it does not touch its frame iterable until the
   returned iterator is consumed.
 - `merge_frames()` is lazy: it does not touch its frame iterables until the
+  returned iterator is consumed.
+- `rebase_timestamps()` is lazy: it does not touch its frame iterable until the
   returned iterator is consumed.
 - Unknown or undetectable formats raise `ValueError`; unreadable paths raise the
   underlying `OSError` subclass, unchanged.
@@ -100,6 +103,48 @@ rather than stopping after a timestamp exceeds `end_time`.
 
 Passing both time bounds with `start_time > end_time` raises `ValueError`
 without consuming the frame iterable.
+
+### `rebase_timestamps()`
+
+```python
+rebase_timestamps(
+    frames: Iterable[Frame],
+    *,
+    origin: float | None = None,
+    offset: float = 0.0,
+) -> Iterator[Frame]
+```
+
+Returns a lazy iterator that translates every timestamp onto an explicitly
+chosen time base:
+
+```text
+new_timestamp = frame.timestamp - source_origin + offset
+```
+
+`origin` names a timestamp in the source time base, and `offset` is the output
+timestamp that source origin maps to. For example, `origin=1_752_624_000.0`
+and `offset=10.0` map that epoch instant to 10 seconds. The origin does not
+need to equal any frame timestamp.
+
+When `origin` is omitted, the first frame's recorded timestamp becomes the
+source origin. With the default `offset=0.0`, the first output frame therefore
+has timestamp zero. Supplying only `offset` maps the inferred first-frame
+origin to that value.
+
+Calling `rebase_timestamps()` does not touch the input. On first iteration, an
+omitted origin requires reading one frame to resolve the source origin; that
+replacement frame is yielded immediately. The helper then consumes and yields
+one frame at a time without reading ahead or materializing the stream. An empty
+input produces an empty iterator.
+
+Each output is a new frozen `Frame` with only `timestamp` replaced. Every
+non-timestamp field is preserved, input frames remain unchanged, and applying
+one translation preserves source order and timestamp deltas, including for
+negative and epoch-scale inputs. No ordering validation is performed.
+
+This operation is separate from reading: `read()` and every reader continue to
+return timestamps exactly as recorded.
 
 ### `merge_frames()`
 

@@ -15,7 +15,7 @@ def test_root_exports_are_intentionally_small() -> None:
     assert capkit.__all__ == [
         "Frame", "LogMeta",
         "read", "probe", "available_formats", "register_reader",
-        "filter_frames", "merge_frames",
+        "filter_frames", "merge_frames", "rebase_timestamps",
     ]
 
 

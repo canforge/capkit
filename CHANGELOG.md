@@ -15,6 +15,8 @@ Versioning will follow [Semantic Versioning](https://semver.org/) from 1.0.0 onw
   inclusive time windows, with composable AND semantics and no frame copying.
 - Lazy `merge_frames()` k-way merging for preordered frame streams, with
   deterministic equal-timestamp ordering and incremental order validation.
+- Lazy, explicit `rebase_timestamps()` translation with first-frame-to-zero
+  defaults and configurable source origin and target offset.
 
 ### Changed
 

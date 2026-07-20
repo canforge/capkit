@@ -25,7 +25,7 @@ fixture-first: a format lands only with a real capture under `tests/fixtures/<fo
 
 - [x] Filters: by ID set, channel, and time window
 - [x] Merge several logs into one time-ordered stream (multi-bus and multi-file captures)
-- [ ] Explicit, opt-in timestamp rebasing helper — `read()` itself keeps returning
+- [x] Explicit, opt-in timestamp rebasing helper — `read()` itself keeps returning
   timestamps exactly as recorded
 - [ ] J1939 arbitration-ID decomposition (priority, PGN, source address): pure per-frame
   arithmetic with no DBC awareness. dbckit 1.1 derives PGNs internally for DBC message

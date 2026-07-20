@@ -21,9 +21,11 @@ supports. A reader is added only when a real captured fixture pins its dialect u
 Only supported rows are registered as readers or advertised through package entry points.
 
 Readers yield recognized frame records in file order without sorting or
-rebasing their timestamps. `merge_frames()` can combine reader outputs that
-are already nondecreasing and share a comparable time base; it validates each
-source incrementally and raises `ValueError` if a timestamp moves backwards.
+rebasing their timestamps. `rebase_timestamps()` is a separate, opt-in stream
+operation and never changes reader or `probe()` behavior. `merge_frames()` can
+combine reader outputs that are already nondecreasing and share a comparable
+time base; it validates each source incrementally and raises `ValueError` if a
+timestamp moves backwards.
 
 ### dbckit integration
 
@@ -65,7 +67,7 @@ raises `ValueError` in both modes.
 - Memorator and other Kvaser dialects with absolute date headers — `probe()`
   returns `start_time=None`
 - Remote, error, and CAN FD record grammars
-- Timestamp rebasing or inferred absolute time
+- Reader-level timestamp rebasing or inferred absolute time
 
 ---
 
